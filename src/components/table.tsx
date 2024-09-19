@@ -1,17 +1,18 @@
+import { useState } from "react";
+const COLUMNS: number = 9;
+const ROWS: number = 6;
+
+const range = (length: number): number[] => Array.from({ length }, (_, i) => i);
+
+let state: { computedValue: string | number; value: string | number }[][] =
+  range(COLUMNS).map(() =>
+    range(ROWS).map(() => ({ computedValue: "", value: "" }))
+  );
+
 export default function Table() {
-  const COLUMNS: number = 9;
-  const ROWS: number = 6;
+  const [inputValue, setInputValue] = useState(state);
 
-  const range = (length: number): number[] =>
-    Array.from({ length }, (_, i) => i);
-
-  let state: { computedValue: string | number; value: string | number }[][] =
-    range(COLUMNS).map(() =>
-      range(ROWS).map(() => ({ computedValue: 0, value: 0 }))
-    );
-
-  // encuentra la celda mas cercana al click
-
+  // recive las coordenadas { x, y } para actualizar la matriz con los valores { value }
   function updateCell({
     x,
     y,
@@ -29,28 +30,38 @@ export default function Table() {
     newState[x][y] = cell;
 
     state = newState;
+    setInputValue(state);
   }
 
   const handleCellClick = (event: React.MouseEvent): void => {
     const td = (event.target as HTMLElement).closest("td");
 
-    // solucion temporaria ya que fallaba al desestructurar directamente x,y desde td.dataset
-    // @ts-expect-error solucion temporaria TODO: fix types
-    const { dataset }: HTMLTableCellElement | null = td;
-    const { x, y } = dataset;
+    if (!td) return;
+
+    const x = parseInt(td.dataset.x ?? "");
+    const y = parseInt(td.dataset.y ?? "");
+
+    if (isNaN(x) || isNaN(y)) {
+      console.error("Invalid x or y value in dataset");
+      return;
+    }
 
     // const span = td.querySelector("span");
-    const input = td?.querySelector("input");
+    const input: HTMLInputElement | null | undefined =
+      td?.querySelector("input");
 
-    // configuracion del input para que cuando se seleccione todo el texto onClick
-    input?.setSelectionRange(0, -1);
-    input?.focus();
+    if (!input) return;
+    input.setSelectionRange(0, -1);
+    input.focus();
 
-    input?.addEventListener(
+    input.addEventListener("keydown", (event: KeyboardEvent): void => {
+      if (event.key === "Enter") input.blur();
+    });
+
+    input.addEventListener(
       "blur",
       () => {
         if (input.value === state[x][y].value) return;
-
         updateCell({ x, y, value: input.value });
       },
       { once: true }
@@ -87,12 +98,15 @@ export default function Table() {
                   data-y={row}
                   className="relative border border-[#ccc] p-0 h-8"
                 >
-                  <span className="absolute inset-0 flex bg-slate-100 items-center justify-center pointer-events-none">
-                    {state[column][row].computedValue}
+                  <span
+                    defaultValue={state[column][row].computedValue}
+                    className="absolute inset-0 flex bg-slate-100 items-center justify-center pointer-events-none"
+                  >
+                    {inputValue[column][row].computedValue}
                   </span>
                   <input
                     className="absolute inset-0 w-full h-full px-1 opacity-0 focus:outline-none focus:ring-2 focus:opacity-100 focus:ring-cyan-600 focus:border-transparent"
-                    // value={state[column][row].value}
+                    defaultValue={state[column][row].value}
                   />
                 </td>
               ))}
