@@ -10,7 +10,7 @@ let state: { computedValue: string | number; value: string | number }[][] =
   );
 
 export default function Table() {
-  const [inputValue, setInputValue] = useState(state);
+  const [newState, setNewState] = useState(state);
 
   // recive las coordenadas { x, y } para actualizar la matriz con los valores { value }
   function updateCell({
@@ -30,7 +30,7 @@ export default function Table() {
     newState[x][y] = cell;
 
     state = newState;
-    setInputValue(state);
+    setNewState(state);
   }
 
   const handleCellClick = (event: React.MouseEvent): void => {
@@ -68,6 +68,62 @@ export default function Table() {
     );
   };
 
+  function computeValue(value: string): number | undefined {
+    // Si no es una fórmula (no empieza con "="), devolver el número directamente
+    if (!value.startsWith("=")) return +value;
+
+    // Eliminar el "=" del principio y eliminar los espacios en blanco
+    const formula = value.slice(1).replace(/\s+/g, "");
+
+    let currentNumber = "";
+    const numbers: number[] = [];
+    const operators: string[] = [];
+
+    // Recorrer la fórmula para separar números y operadores
+    for (let i = 0; i < formula.length; i++) {
+      const char = formula[i];
+
+      if (!isNaN(Number(char)) || char === ".") {
+        // Acumulamos los dígitos en currentNumber si es un número o un punto decimal
+        currentNumber += char;
+      } else if (["+", "-", "*", "/"].includes(char)) {
+        // Cuando encontramos un operador, guardamos el número acumulado
+        numbers.push(parseFloat(currentNumber));
+        operators.push(char);
+        currentNumber = ""; // Reiniciar el acumulador
+      }
+    }
+
+    // Asegurarnos de agregar el último número acumulado
+    if (currentNumber) {
+      numbers.push(parseFloat(currentNumber));
+    }
+
+    // Realizamos las operaciones en el orden en que aparecen
+    let result = numbers[0];
+    for (let i = 0; i < operators.length; i++) {
+      const operator = operators[i];
+      const nextNumber = numbers[i + 1];
+
+      switch (operator) {
+        case "+":
+          result += nextNumber;
+          break;
+        case "-":
+          result -= nextNumber;
+          break;
+        case "*":
+          result *= nextNumber;
+          break;
+        case "/":
+          result /= nextNumber;
+          break;
+      }
+    }
+
+    return result;
+  }
+
   return (
     <div className="w-full overflow-x-auto">
       <table className="w-full border-collapse border border-[#ccc]">
@@ -102,11 +158,11 @@ export default function Table() {
                     defaultValue={state[column][row].computedValue}
                     className="absolute inset-0 flex bg-slate-100 items-center justify-center pointer-events-none"
                   >
-                    {inputValue[column][row].computedValue}
+                    {newState[column][row].computedValue}
                   </span>
                   <input
                     className="absolute inset-0 w-full h-full px-1 opacity-0 focus:outline-none focus:ring-2 focus:opacity-100 focus:ring-cyan-600 focus:border-transparent"
-                    defaultValue={state[column][row].value}
+                    defaultValue={newState[column][row].value}
                   />
                 </td>
               ))}
