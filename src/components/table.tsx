@@ -1,13 +1,11 @@
 import { useState } from "react";
-const COLUMNS: number = 9;
-const ROWS: number = 6;
+import { range } from "../utils/range";
+import { COLUMNS, ROWS } from "../utils/constats";
+import { CellState } from "../types/types";
 
-const range = (length: number): number[] => Array.from({ length }, (_, i) => i);
-
-let state: { computedValue: string | number; value: string | number }[][] =
-  range(COLUMNS).map(() =>
-    range(ROWS).map(() => ({ computedValue: "", value: "" }))
-  );
+let state: CellState[][] = range(COLUMNS).map(() =>
+  range(ROWS).map(() => ({ computedValue: "", value: "" }))
+);
 
 export default function Table() {
   const [newState, setNewState] = useState(state);
@@ -42,7 +40,7 @@ export default function Table() {
     const y = parseInt(td.dataset.y ?? "");
 
     if (isNaN(x) || isNaN(y)) {
-      console.error("Invalid x or y value in dataset");
+      console.error("Invalid X or Y value in dataset");
       return;
     }
 
@@ -51,78 +49,24 @@ export default function Table() {
       td?.querySelector("input");
 
     if (!input) return;
+
     input.setSelectionRange(0, -1);
     input.focus();
 
-    input.addEventListener("keydown", (event: KeyboardEvent): void => {
-      if (event.key === "Enter") input.blur();
-    });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === "Escape") {
+        input.blur();
+      }
+    };
 
-    input.addEventListener(
-      "blur",
-      () => {
-        if (input.value === state[x][y].value) return;
-        updateCell({ x, y, value: input.value });
-      },
-      { once: true }
-    );
+    const handleBlur = () => {
+      if (input.value === state[x][y].value) return;
+      updateCell({ x, y, value: input.value });
+    };
+
+    input.addEventListener("keydown", handleKeyDown);
+    input.addEventListener("blur", handleBlur, { once: true });
   };
-
-  function computeValue(value: string): number | undefined {
-    // Si no es una fórmula (no empieza con "="), devolver el número directamente
-    if (!value.startsWith("=")) return +value;
-
-    // Eliminar el "=" del principio y eliminar los espacios en blanco
-    const formula = value.slice(1).replace(/\s+/g, "");
-
-    let currentNumber = "";
-    const numbers: number[] = [];
-    const operators: string[] = [];
-
-    // Recorrer la fórmula para separar números y operadores
-    for (let i = 0; i < formula.length; i++) {
-      const char = formula[i];
-
-      if (!isNaN(Number(char)) || char === ".") {
-        // Acumulamos los dígitos en currentNumber si es un número o un punto decimal
-        currentNumber += char;
-      } else if (["+", "-", "*", "/"].includes(char)) {
-        // Cuando encontramos un operador, guardamos el número acumulado
-        numbers.push(parseFloat(currentNumber));
-        operators.push(char);
-        currentNumber = ""; // Reiniciar el acumulador
-      }
-    }
-
-    // Asegurarnos de agregar el último número acumulado
-    if (currentNumber) {
-      numbers.push(parseFloat(currentNumber));
-    }
-
-    // Realizamos las operaciones en el orden en que aparecen
-    let result = numbers[0];
-    for (let i = 0; i < operators.length; i++) {
-      const operator = operators[i];
-      const nextNumber = numbers[i + 1];
-
-      switch (operator) {
-        case "+":
-          result += nextNumber;
-          break;
-        case "-":
-          result -= nextNumber;
-          break;
-        case "*":
-          result *= nextNumber;
-          break;
-        case "/":
-          result /= nextNumber;
-          break;
-      }
-    }
-
-    return result;
-  }
 
   return (
     <div className="w-full overflow-x-auto">
@@ -130,7 +74,7 @@ export default function Table() {
         <thead>
           <tr className="bg-slate-300">
             <th className="w-[64px] border border-[#ccc]"></th>
-            {range(COLUMNS).map((i) => (
+            {range(COLUMNS).map((i: number) => (
               <th
                 key={i}
                 className="text-sm h-6 font-normal border border-[#ccc] w-[120px]"
@@ -142,12 +86,12 @@ export default function Table() {
         </thead>
 
         <tbody onClick={(e) => handleCellClick(e)}>
-          {range(ROWS).map((row) => (
+          {range(ROWS).map((row: number) => (
             <tr key={row}>
               <th className="bg-slate-300 font-normal text-sm w-[64px] text-center border border-[#ccc]">
                 {row + 1}
               </th>
-              {range(COLUMNS).map((column) => (
+              {range(COLUMNS).map((column: number) => (
                 <td
                   key={column}
                   data-x={column}
